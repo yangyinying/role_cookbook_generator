@@ -1,0 +1,13 @@
+batch 'Register <%= service_name %> Service' do
+  code 'C:\Windows\Microsoft.NET\Framework\v4.0.30319\InstallUtil.exe <%= service_path %>'
+  not_if { ::Win32::Service.exists?(<%= service_name %>) }
+end
+
+service_user = <%= service_user %>
+unless is_joined_to_domain || <%= service_user %>.include?('\\')
+  service_user = ['.', <%= service_user %>].join('\\')
+end
+powershell_script 'Set User' do
+  code "(gwmi win32_service -filter \"name='<%= service_name %>'\").change($null,$null,$null,$null,$null,$null,'#{service_user}','#{<%= service_password %>.gsub("'", %(' + "'" + '))}',$null,$null,$null)"
+  not_if "if ((gwmi win32_service -filter \"name='<%= service_name %>'\").StartName -eq '#{service_user}') {return $true} else {return $false}"
+end

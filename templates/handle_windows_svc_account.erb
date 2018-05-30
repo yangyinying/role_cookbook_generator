@@ -1,0 +1,9 @@
+data_bag = data_bag_item(node.chef_environment, 'windows_svc_accounts')
+windows_svc_user = data_bag['username']
+windows_svc_password = data_bag['password']
+# If joined to the domain, set windows_svc_user to domain.local\user for domain joined testing.
+is_joined_to_domain = (powershell_out('Write-Host (Get-WmiObject -Class Win32_ComputerSystem).PartOfDomain').stdout.strip == 'True')
+if is_joined_to_domain
+  windows_svc_domain = powershell_out('Write-Host ((Get-WmiObject Win32_ComputerSystem).Domain).split(\'.\')[0]').stdout.strip
+  windows_svc_user = [windows_svc_domain, windows_svc_user].join('\\')
+end

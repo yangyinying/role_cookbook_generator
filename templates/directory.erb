@@ -1,0 +1,4 @@
+directory <%= directory_name %> do
+  inherits true
+  rights WINDOWS_PERM.fetch(<%= perm %>) + WINDOWS_PERM.fetch(:synchronize), [windows_svc_user], applies_to_children: true
+end

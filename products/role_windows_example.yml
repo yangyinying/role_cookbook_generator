@@ -1,0 +1,26 @@
+---
+name: role_windows_example
+platforms:
+  - name: salesforce/server2016
+  - name: salesforce/server2008r2
+suites:
+  - name: role_windows_example
+directories:
+  - name: D:\\MaestroInboundTunnel
+    - user: windows_svc_account
+      perm: modify_sync
+  - name: D:\\MaestroInboundTunnel\DiskSpool
+  - name: D:\Services
+msis:
+  - name: gac
+  - name: maestro_inbound_service_installer
+components:
+  - name: default_apps
+  - name: machine_config
+services:
+  - name: MaestroInboundTunnelService
+    register: true
+    set_user: true
+    user: windows_svc_user
+    password: windows_svc_password
+    path: D:\Services\MaestroInbound\MaestroInboundTunnel.exe

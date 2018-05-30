@@ -1,0 +1,45 @@
+<% if windows_svc_user -%>
+data_bag = data_bag_item(node.chef_environment, 'windows_svc_accounts')
+windows_svc_user = data_bag['username']
+windows_svc_password = data_bag['password']
+# If joined to the domain, set windows_svc_user to domain.local\user for domain joined testing.
+is_joined_to_domain = (powershell_out('Write-Host (Get-WmiObject -Class Win32_ComputerSystem).PartOfDomain').stdout.strip == 'True')
+if is_joined_to_domain
+  windows_svc_domain = powershell_out('Write-Host ((Get-WmiObject Win32_ComputerSystem).Domain).split(\'.\')[0]').stdout.strip
+  windows_svc_user = [windows_svc_domain, windows_svc_user].join('\\')
+end
+<% end -%>
+
+<% if directories -%>
+<% @vdirs.each do |dir| -%>
+directory dir[:path] do
+  inherits true
+  # need a loop here
+  rights WINDOWS_PERM.fetch(dir[:perm]), [windows_svc_user], applies_to_children: true
+  rights WINDOWS_PERM.fetch(:synchronize), [windows_svc_user], applies_to_children: true
+end
+<% end -%>
+
+<% if modules -%>
+# do something to include modules
+<% end -%>
+
+<% if msis -%>
+include_recipe 'sf_windows_apps::<%= package_name %>'
+<% end -%>
+
+<% if services -%>
+batch 'Register <%= service_name %> Service' do
+  code 'C:\Windows\Microsoft.NET\Framework\v4.0.30319\InstallUtil.exe <%= service_path %>'
+  not_if { ::Win32::Service.exists?(<%= service_name %>) }
+end
+
+service_user = <%= service_user %>
+unless is_joined_to_domain || <%= service_user %>.include?('\\')
+  service_user = ['.', <%= service_user %>].join('\\')
+end
+powershell_script 'Set User' do
+  code "(gwmi win32_service -filter \"name='<%= service_name %>'\").change($null,$null,$null,$null,$null,$null,'#{service_user}','#{<%= service_password %>.gsub("'", %(' + "'" + '))}',$null,$null,$null)"
+  not_if "if ((gwmi win32_service -filter \"name='<%= service_name %>'\").StartName -eq '#{service_user}') {return $true} else {return $false}"
+end
+<% end -%>
